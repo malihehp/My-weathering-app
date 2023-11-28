@@ -1,32 +1,23 @@
 function refreshWeather(response) {
-  console.log("API Response:", response);
+  let temperatureElement = document.querySelector("#temperature");
+  let temperature = response.data.temperature.current;
+  let cityElement = document.querySelector("#city");
+  let descriptionElement = document.querySelector("#description");
+  let humidityElement = document.querySelector("#humidity");
+  let windSpeedElement = document.querySelector("#wind-speed");
+  let timeElement = document.querySelector("#time");
+  let date = new Date(response.data.time * 1000);
+  let iconElement = document.querySelector("#icon");
 
-  if (response.data && response.data.list && response.data.list.length > 0) {
-    // Assuming the first item in the list contains the current weather data
-    let currentWeather = response.data.list[0];
+  cityElement.innerHTML = response.data.city;
+  timeElement.innerHTML = formatDate(date);
+  descriptionElement.innerHTML = response.data.condition.description;
+  humidityElement.innerHTML = `${response.data.temperature.humidity}%`;
+  windSpeedElement.innerHTML = `${response.data.wind.speed}km/h`;
+  temperatureElement.innerHTML = Math.round(temperature);
+  iconElement.innerHTML = `<img src="${response.data.condition.icon_url}" class="weather-app-icon" />`;
 
-    let temperatureElement = document.querySelector("#temperature");
-    let cityElement = document.querySelector("#city");
-    let descriptionElement = document.querySelector("#description");
-    let humidityElement = document.querySelector("#humidity");
-    let windSpeedElement = document.querySelector("#wind-speed");
-    let timeElement = document.querySelector("#time");
-    let iconElement = document.querySelector("#icon");
-
-    // Convert temperature from Kelvin to Celsius
-    let temperatureCelsius = currentWeather.main.temp - 273.15;
-
-    cityElement.innerHTML = response.data.city.name;
-    timeElement.innerHTML = formatDate(new Date(currentWeather.dt * 1000));
-    descriptionElement.innerHTML = currentWeather.weather[0].description;
-    humidityElement.innerHTML = `${currentWeather.main.humidity}%`;
-    windSpeedElement.innerHTML = `${currentWeather.wind.speed}km/h`;
-    temperatureElement.innerHTML = Math.round(temperatureCelsius);
-    iconElement.innerHTML = `<img src="https://openweathermap.org/img/wn/${currentWeather.weather[0].icon}.png" class="weather-app-icon" />`;
-  } else {
-    console.error("Invalid response structure:", response);
-    // Handle the case where properties are missing
-  }
+  getForecast(response.data.city);
 }
 
 function formatDate(date) {
@@ -51,33 +42,61 @@ function formatDate(date) {
 }
 
 function searchCity(city) {
-  let apiKey = "7d19e202d7bd4d388ee455df3c1e148f";
-  let apiUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}`;
-
-  axios
-    .get(apiUrl)
-    .then((response) => {
-      console.log("Successful API response:", response);
-      if (response.data) {
-        console.log("Response data:", response.data);
-        refreshWeather(response);
-      } else {
-        console.error("Invalid response data:", response);
-      }
-    })
-    .catch((error) => {
-      console.error("Error fetching weather data:", error);
-    });
+  let apiKey = "a9e74f9a3btf071860a5o1ce50042413";
+  let apiUrl = `https://api.shecodes.io/weather/v1/current?query=${city}&key=${apiKey}&units=metric`;
+  axios.get(apiUrl).then(refreshWeather);
 }
 
 function handleSearchSubmit(event) {
   event.preventDefault();
   let searchInput = document.querySelector("#search-form-input");
+
   searchCity(searchInput.value);
+}
+
+function formatDay(timestamp) {
+  let date = new Date(timestamp * 1000);
+  let days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  return days[date.getDay()];
+}
+
+function getForecast(city) {
+  let apiKey = "a9e74f9a3btf071860a5o1ce50042413";
+  let apiUrl = `https://api.shecodes.io/weather/v1/forecast?query=${city}&key=${apiKey}&units=metric`;
+  axios(apiUrl).then(displayForecast);
+}
+
+function displayForecast(response) {
+  let forecastHtml = "";
+
+  response.data.daily.forEach(function (day, index) {
+    if (index < 5) {
+      forecastHtml =
+        forecastHtml +
+        `
+      <div class="weather-forecast-day">
+        <div class="weather-forecast-date">${formatDay(day.time)}</div>
+
+        <img src="${day.condition.icon_url}" class="weather-forecast-icon" />
+        <div class="weather-forecast-temperatures">
+          <div class="weather-forecast-temperature">
+            <strong>${Math.round(day.temperature.maximum)}º</strong>
+          </div>
+          <div class="weather-forecast-temperature">${Math.round(
+            day.temperature.minimum
+          )}º</div>
+        </div>
+      </div>
+    `;
+    }
+  });
+
+  let forecastElement = document.querySelector("#forecast");
+  forecastElement.innerHTML = forecastHtml;
 }
 
 let searchFormElement = document.querySelector("#search-form");
 searchFormElement.addEventListener("submit", handleSearchSubmit);
 
-// Initial call with a default city
 searchCity("Tehran");
